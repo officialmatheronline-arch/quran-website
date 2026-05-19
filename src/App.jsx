@@ -4,6 +4,7 @@ const API = "https://api.alquran.cloud/v1";
 const WHATSAPP_NUMBER = "923166311442";
 const BISMILLAH_AUDIO = "https://cdn.islamic.network/quran/audio/128/ar.alafasy/1.mp3";
 const WHATSAPP_LINK = "https://web.whatsapp.com/send?phone=" + WHATSAPP_NUMBER + "&text=" + encodeURIComponent("Assalamualaikum");
+const LOGO_URL = "https://raw.githubusercontent.com/officialmatheronline-arch/quran-website/main/logo.png.png";
 
 const RECITERS = [
   { id: "nooresunnat-sudais-shuraim-urdu", name: "Sudais & Shuraim + Urdu" },
@@ -426,6 +427,7 @@ export default function QuranPakWebsite() {
   const [contactError, setContactError] = useState("");
   const [contactSuccess, setContactSuccess] = useState("");
   const surahAudioRef = useRef(null);
+  const audioRunIdRef = useRef(0);
 
   useEffect(() => {
     async function loadSurahs() {
@@ -492,8 +494,12 @@ export default function QuranPakWebsite() {
   }
 
   function stopFullSurah() {
+    audioRunIdRef.current += 1;
     if (surahAudioRef.current) {
       surahAudioRef.current.pause();
+      surahAudioRef.current.currentTime = 0;
+      surahAudioRef.current.onended = null;
+      surahAudioRef.current.onerror = null;
       surahAudioRef.current = null;
     }
     if (window.speechSynthesis) {
@@ -504,8 +510,12 @@ export default function QuranPakWebsite() {
   }
 
   function finishAudioPlayback() {
+    audioRunIdRef.current += 1;
     if (surahAudioRef.current) {
       surahAudioRef.current.pause();
+      surahAudioRef.current.currentTime = 0;
+      surahAudioRef.current.onended = null;
+      surahAudioRef.current.onerror = null;
       surahAudioRef.current = null;
     }
     setIsSurahPlaying(false);
@@ -541,7 +551,16 @@ export default function QuranPakWebsite() {
   }
 
   function playFullSurah(startIndex = 0, withBismillah = true) {
-    if (surahAudioRef.current) surahAudioRef.current.pause();
+    audioRunIdRef.current += 1;
+    const runId = audioRunIdRef.current;
+
+    if (surahAudioRef.current) {
+      surahAudioRef.current.pause();
+      surahAudioRef.current.currentTime = 0;
+      surahAudioRef.current.onended = null;
+      surahAudioRef.current.onerror = null;
+      surahAudioRef.current = null;
+    }
 
     if (isNooreSunnatReciter) {
       const fullSurahUrl = getNooreSunnatAudioUrl(selectedSurah);
@@ -550,9 +569,14 @@ export default function QuranPakWebsite() {
       surahAudioRef.current = audio;
       setIsSurahPlaying(true);
       setSurahAudioIndex(0);
-      audio.play().catch(() => setIsSurahPlaying(false));
-      audio.onended = () => finishAudioPlayback();
+      audio.play().catch(() => {
+        if (audioRunIdRef.current === runId) setIsSurahPlaying(false);
+      });
+      audio.onended = () => {
+        if (audioRunIdRef.current === runId) finishAudioPlayback();
+      };
       audio.onerror = () => {
+        if (audioRunIdRef.current !== runId) return;
         setError("NooreSunnat audio load nahi hui. Ho sakta hai browser/server ne direct MP3 block kar di ho.");
         finishAudioPlayback();
       };
@@ -570,8 +594,11 @@ export default function QuranPakWebsite() {
     setIsSurahPlaying(true);
     setSurahAudioIndex(shouldPlayBismillah ? -1 : safeIndex);
 
-    audio.play().catch(() => setIsSurahPlaying(false));
+    audio.play().catch(() => {
+      if (audioRunIdRef.current === runId) setIsSurahPlaying(false);
+    });
     audio.onended = () => {
+      if (audioRunIdRef.current !== runId) return;
       if (shouldPlayBismillah) playFullSurah(0, false);
       else if (safeIndex + 1 < ayahs.length) playFullSurah(safeIndex + 1, false);
       else finishAudioPlayback();
@@ -608,7 +635,9 @@ export default function QuranPakWebsite() {
         <div className="relative max-w-7xl mx-auto px-4 py-8 md:py-12">
           <nav className="flex items-center justify-between gap-4 mb-10">
             <div className="flex items-center gap-3">
-              <div className="h-14 w-14 rounded-3xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/25 text-2xl ring-4 ring-white/70">📖</div>
+              <div className="h-16 w-16 overflow-hidden rounded-3xl bg-white flex items-center justify-center shadow-lg shadow-emerald-500/25 ring-4 ring-white/70">
+                <img src={LOGO_URL} alt="Quran Pak Seekhain Logo" className="h-full w-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+              </div>
               <div>
                 <p className="text-sm text-emerald-700 font-semibold">Quran Learning Website</p>
                 <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Quran Pak Seekhain</h1>
