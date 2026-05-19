@@ -430,6 +430,27 @@ export default function QuranPakWebsite() {
   const audioRunIdRef = useRef(0);
 
   useEffect(() => {
+    document.title = "Quran Pak Website";
+
+    let favicon = document.querySelector("link[rel='icon']");
+    if (!favicon) {
+      favicon = document.createElement("link");
+      favicon.rel = "icon";
+      document.head.appendChild(favicon);
+    }
+    favicon.type = "image/png";
+    favicon.href = LOGO_URL;
+
+    let appleIcon = document.querySelector("link[rel='apple-touch-icon']");
+    if (!appleIcon) {
+      appleIcon = document.createElement("link");
+      appleIcon.rel = "apple-touch-icon";
+      document.head.appendChild(appleIcon);
+    }
+    appleIcon.href = LOGO_URL;
+  }, []);
+
+  useEffect(() => {
     async function loadSurahs() {
       try {
         setLoading(true);
